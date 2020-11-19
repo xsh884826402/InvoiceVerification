@@ -2,13 +2,28 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
+type InvociceInfoBaiduai struct{
+	Words_result ValidInvoiceInfoBaiduai `json:"words_result"`
+}
+
+type ValidInvoiceInfoBaiduai struct{
+	InvoiceCode string
+	InvoiceNum string
+	InvoiceType string
+	CheckCode string
+	TotalAmount string
+	InvoiceDate string
+}
 type CommonPostData struct{
 	ZipCode string `json:"zipCode"`
 	EncryptCode string	`json:"encryptCode"`
@@ -26,16 +41,24 @@ type SingleInvoiceCheckPostData struct{
 	Fpzl string `json:"fpzl"`
 }
 
-func SingleInvoiceCheck(url string){
+func SingleInvoiceCheck(url string, singleInvoiceCheckPostData SingleInvoiceCheckPostData){
 	// build postdata
-	singleInvoiceCheckPostData := SingleInvoiceCheckPostData{
-		Jym : "",
-		Fpje: "12092.26",
-		Fpdm: "4100191130",
-		Kprq: "20190906",
-		Fphm: "07537241",
-		Fpzl: "01",
-	}
+	//singleInvoiceCheckPostData := SingleInvoiceCheckPostData{
+	//	Jym : "",
+	//	Fpje: "12092.26",
+	//	Fpdm: "4100191130",
+	//	Kprq: "20190906",
+	//	Fphm: "07537241",
+	//	Fpzl: "01",
+	//}
+	//singleInvoiceCheckPostData := SingleInvoiceCheckPostData{
+	//	Jym : "",
+	//	Fpje: "146.98",
+	//	Fpdm: "011001900611",
+	//	Kprq: "20200811",
+	//	Fphm: "97672880",
+	//	Fpzl: "10",
+	//}
 
 	singleInvoiceCheckPostDataJson,_ :=json.Marshal(singleInvoiceCheckPostData)
 	fmt.Println("Single Json", string(singleInvoiceCheckPostDataJson))
@@ -52,7 +75,6 @@ func SingleInvoiceCheck(url string){
 	}
 	commonPostDataJson,_ :=json.Marshal(commonPostData)
 
-
 	fmt.Println("PostDataJson",string(commonPostDataJson))
 	client := &http.Client{}
 	request,_ := http.NewRequest("POST", url, bytes.NewBuffer(commonPostDataJson))
@@ -61,7 +83,7 @@ func SingleInvoiceCheck(url string){
 	fmt.Println("resp", resp)
 
 	body,_ := ioutil.ReadAll(resp.Body)
-	fmt.Println("body", string(body))
+	//fmt.Println("body", string(body))
 
 	resp_result := CommonPostData{}
 	err := json.Unmarshal(body, &resp_result)
@@ -74,10 +96,46 @@ func SingleInvoiceCheck(url string){
 
 }
 
-func main() {
-	//tokendata := GetTokenData()
-	//fmt.Println(tokendata)
-	//fmt.Println("haha")
+func GetInvoiceInfoByBaiduai() []byte{
+	Baiduai_url := "https://aip.baidubce.com/rest/2.0/ocr/v1/vat_invoice"
+	BaiduaiTokenData := GetBaiduaiTokenData()
+	v, ok := BaiduaiTokenData["access_token"].(string)
+	if ok{
+		Baiduai_url += "?access_token="+v
+	} else{
+		log.Fatal("access_token is not sting")
+	}
+
+	file_str :="/Users/shenghu/Project/InvoiceVerification/doc/data/"
+	file_str += "31605490445_.pic_hd.jpg"
+	fmt.Println("file_str",file_str)
+	image_data, err := ioutil.ReadFile(file_str)
+	if err != nil{
+		log.Fatal(err)
+	}
+	image_data_base64 := base64.StdEncoding.EncodeToString(image_data)
+
+	//fmt.Println(reflect.TypeOf(image_data_base64),image_data_base64)
+	params := url.Values{}
+	params.Add("image", image_data_base64)
+
+	//fmt.Println("params:", params.Encode())
+	request,_ :=http.NewRequest("POST", Baiduai_url, bytes.NewBuffer([] byte(params.Encode())))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := &http.Client{}
+	resp,_:=client.Do(request)
+	//resp, _ := http.Post(Baiduai_url, "application/x-www-form-urlencoded", bytes.NewBuffer([] byte(params.Encode())))
+
+	fmt.Println("InvoiceInfo By Baiduai resp", resp)
+	body,_ :=ioutil.ReadAll(resp.Body)
+	return body
+	//var result map[string] interface{}
+	//_ =json.Unmarshal(body, &result)
+	//fmt.Println("result", result)
+	//return result
+}
+
+func FlowSingleInvoiceCheck(){
 	token:= GetTokenData()
 	UrlSinggleInvoiceCheck := "https://sandbox.ele-cloud.com/api/open-recipt/V1/CheckInvoiceSingle"
 	v, ok := token["access_token"].(string)
@@ -87,5 +145,45 @@ func main() {
 		log.Println("access_token is not string")
 	}
 	fmt.Println("url",UrlSinggleInvoiceCheck)
-	SingleInvoiceCheck(UrlSinggleInvoiceCheck)
+	InvoiceInfoMap := GetInvoiceInfoByBaiduai()
+
+	var invoiceInfoBaiduai InvociceInfoBaiduai
+	err :=json.Unmarshal(InvoiceInfoMap, &invoiceInfoBaiduai)
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	singleInvoiceCheckPostData := SingleInvoiceCheckPostData{
+		//Jym : "",
+		//Fpje: "12092.26",
+		//Fpdm: "4100191130",
+		//Kprq: "20190906",
+		//Fphm: "07537241",
+		//Fpzl: "01",
+	}
+	fmt.Println("debug ", invoiceInfoBaiduai.Words_result.InvoiceType)
+	singleInvoiceCheckPostData.Fpje = invoiceInfoBaiduai.Words_result.TotalAmount
+	singleInvoiceCheckPostData.Fpdm = invoiceInfoBaiduai.Words_result.InvoiceCode
+	st := invoiceInfoBaiduai.Words_result.InvoiceDate
+	st = strings.Replace(st, "年", "", -1)
+	st = strings.Replace(st,"月","",-1)
+	st = strings.Replace(st,"日","",-1)
+
+	//singleInvoiceCheckPostData.Kprq = st+"haha"
+	singleInvoiceCheckPostData.Kprq = st
+
+	singleInvoiceCheckPostData.Fphm = invoiceInfoBaiduai.Words_result.InvoiceNum
+	if invoiceInfoBaiduai.Words_result.InvoiceType=="电子普通发票" {
+		singleInvoiceCheckPostData.Fpzl = "10"
+	}
+
+	if singleInvoiceCheckPostData.Fpzl =="10"{
+		singleInvoiceCheckPostData.Jym = invoiceInfoBaiduai.Words_result.CheckCode[len(invoiceInfoBaiduai.Words_result.CheckCode)-6:]
+	}
+	SingleInvoiceCheck(UrlSinggleInvoiceCheck,singleInvoiceCheckPostData)
+}
+
+func main() {
+	FlowSingleInvoiceCheck()
+
 }

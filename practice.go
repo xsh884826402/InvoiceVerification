@@ -17,6 +17,12 @@ package main
 
 //
 //func main(){
-//	fmt.Println(len(CreateRandomDataExchangeId()))
+//	st :="2020年08月11日"
+//	st = strings.Replace(st, "年", "", -1)
+//	st = strings.Replace(st,"月","",-1)
+//	st = strings.Replace(st,"日","",-1)
+//
+//
+//	println(st)
 //}
 
