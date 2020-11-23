@@ -22,7 +22,7 @@ func GetTokenData() map[string]interface{}{
 		AppSecret: "awSW7gts8AS4StGV84HCKVCf",
 	}
 	getTokenPostDataJson, err :=json.Marshal(getTokenPostData)
-	fmt.Println(string(getTokenPostDataJson))
+	//fmt.Println(string(getTokenPostDataJson))
 	if err != nil{
 		log.Fatal(err)
 	}
