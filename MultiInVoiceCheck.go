@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 )
 
 //
@@ -19,7 +18,7 @@ func CheckMultiInputFileType(filenames_str [] string) []string{
 	return checked_filenames_str
 }
 
-func FlowMultiInvoiceCheck(filenames_str []string){
+func FlowMultiInvoiceCheck(filenames_str []string) string{
 	filenames_str = CheckMultiInputFileType(filenames_str)
 	var multiInvoiceInfo []SingleInvoiceCheckPostData
 	for _,filename := range filenames_str{
@@ -28,7 +27,8 @@ func FlowMultiInvoiceCheck(filenames_str []string){
 		}
 	PchNumber := GeneratePchNumber()
 	fmt.Println("PchNumber", PchNumber)
-	_ = ioutil.WriteFile("./PchNumber", []byte(PchNumber),0777)
+	AppendContentToFile("./PchNumber_record", PchNumber)
+
 	multiInvoiceCheckPostData := MultiInvoiceCheckPostData{
 		Pch: PchNumber,
 		MultiInvoiceInfo: multiInvoiceInfo,
@@ -38,9 +38,10 @@ func FlowMultiInvoiceCheck(filenames_str []string){
 	MultiInvoiceCheckUrl := GetUrlFromFactory("MultiInvoiceCheck")
 	result := SentHttpequestByPost(MultiInvoiceCheckUrl, jsonData)
 	fmt.Println("result", result)
-
+	return "PchNumber:"+PchNumber+result
 
 }
+
 //func flowInMultiVoiceCheck([]string){
 //
 //}

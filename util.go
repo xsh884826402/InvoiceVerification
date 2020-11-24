@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -193,7 +197,23 @@ func SentHttpequestByPost(url string,commonPostDataJson [] byte) string{
 	result,_ := Base64Decode(resp_result.Content)
 	return result
 }
+func CopyHttpfilesToLocalFiles(files []*multipart.FileHeader) []string{
+	var InvoiceFilenames []string
+	for i :=0; i<len(files);i++{
+		file, err := files[i].Open()
+		defer file.Close()
+		if err != nil{
+			log.Fatal(err)
+		}
+		temp_str :="./cache/"+files[i].Filename
+		cur, _ := os.Create(temp_str)
+		InvoiceFilenames = append(InvoiceFilenames,temp_str)
+		defer cur.Close()
 
+		io.Copy(cur, file)
+	}
+	return InvoiceFilenames
+}
 func GeneratePchNumber() string{
 	current_time := time.Now().Format("20060102150405")
 	var head0 string
@@ -202,4 +222,15 @@ func GeneratePchNumber() string{
 	}
 	current_time =head0+current_time
 	return current_time
+}
+
+func AppendContentToFile(filePath string, Content string){
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println("文件打开失败", err)
+	}
+	defer file.Close()
+	write := bufio.NewWriter(file)
+	write.WriteString(Content)
+	write.Flush()
 }

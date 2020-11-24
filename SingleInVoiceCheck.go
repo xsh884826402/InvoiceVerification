@@ -41,23 +41,7 @@ type SingleInvoiceCheckPostData struct{
 }
 
 func SingleInvoiceCheck(url string, singleInvoiceCheckPostData SingleInvoiceCheckPostData){
-	// build postdata
-	//singleInvoiceCheckPostData := SingleInvoiceCheckPostData{
-	//	Jym : "",
-	//	Fpje: "12092.26",
-	//	Fpdm: "4100191130",
-	//	Kprq: "20190906",
-	//	Fphm: "07537241",
-	//	Fpzl: "01",
-	//}
-	//singleInvoiceCheckPostData := SingleInvoiceCheckPostData{
-	//	Jym : "",
-	//	Fpje: "146.98",
-	//	Fpdm: "011001900611",
-	//	Kprq: "20200811",
-	//	Fphm: "97672880",
-	//	Fpzl: "10",
-	//}
+
 
 	singleInvoiceCheckPostDataJson,_ :=json.Marshal(singleInvoiceCheckPostData)
 	fmt.Println("Single Json", string(singleInvoiceCheckPostDataJson))
@@ -133,7 +117,7 @@ func GetInvoiceInfoByBaiduai(file_str string) []byte{
 	//return result
 }
 
-func FlowSingleInvoiceCheck(file_str string){
+func FlowSingleInvoiceCheck(file_str string) string{
 	file_str = CheckInputFileType(file_str)
 	singleInvoiceCheckPostData := ConvertFileToInvoiceJson(file_str)
 	singleInvoiceCheckPostDataJson,_ := json.Marshal(singleInvoiceCheckPostData)
@@ -144,13 +128,12 @@ func FlowSingleInvoiceCheck(file_str string){
 	fmt.Println(SingleInvoiceCheckUrl, string(jsonData))
 	result := SentHttpequestByPost(SingleInvoiceCheckUrl, jsonData )
 	fmt.Println("result",result)
-
+	return result
 }
-
-func main() {
-	file_str :="/Users/shenghu/Project/InvoiceVerification/doc/data/"
-	file_str += "a.pdf"
-
-	FlowSingleInvoiceCheck(file_str)
-
-}
+//
+//func main() {
+//	file_str :="/Users/shenghu/Project/InvoiceVerification/doc/data/"
+//	file_str += "a.pdf"
+//
+//	FlowSingleInvoiceCheck(file_str)
+//}

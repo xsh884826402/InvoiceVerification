@@ -2,14 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 type MultiInvoiceResultQueryPostData struct {
 	Pch string `json:"pch"`
 }
 
-func flowMultiInvoiceResultQuery(PchNumber string){
+func flowMultiInvoiceResultQuery(PchNumber string) string{
 	multiInvoiceResultQueryPostData := MultiInvoiceCheckPostData{}
 	multiInvoiceResultQueryPostData.Pch = PchNumber
 
@@ -17,7 +16,8 @@ func flowMultiInvoiceResultQuery(PchNumber string){
 	jsonData := PrepareJsonForHttpRequest(multiInvoiceResultQueryPostDataJson)
 	MultiInvoiceResultQueryUrl := GetUrlFromFactory("MultiInvoiceResultQuery")
 	result := SentHttpequestByPost(MultiInvoiceResultQueryUrl, jsonData)
-	fmt.Println("result", result)
+	//fmt.Println("result", result)
+	return result
 }
 
 //func main() {
