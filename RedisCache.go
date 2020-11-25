@@ -13,7 +13,13 @@ type ReturnResult struct {
 	Success bool `json:"success"`
 	Code string `json:"code"`
 }
-func SingleInvoiceCheckRedis(singleInvoiceCheckPostData SingleInvoiceCheckPostData) string{
+func SingleInvoiceCheckAfterRedis(id string,singleInvoiceCheckPostData SingleInvoiceCheckPostData) string{
+	conn := pool.Get()
+	defer conn.Close()
+	_,err :=conn.Do("set",id,"已提交")
+	if err != nil{
+		log.Fatal(err)
+	}
 	singleInvoiceCheckPostDataJson,_ := json.Marshal(singleInvoiceCheckPostData)
 	jsonData :=PrepareJsonForHttpRequest(singleInvoiceCheckPostDataJson)
 
@@ -22,11 +28,8 @@ func SingleInvoiceCheckRedis(singleInvoiceCheckPostData SingleInvoiceCheckPostDa
 	result := SentHttpequestByPost(SingleInvoiceCheckUrl, jsonData )
 	var returnResult ReturnResult
 	_ =json.Unmarshal([]byte(result), &returnResult)
-	if returnResult.Code=="0000"{
-		return result
-	}else{
-		return "失败"
-	}
+	return result
+
 }
 
 //func SingleInvoiceCheckAfterRedis(id string, singleInvoiceCheckPostData SingleInvoiceCheckPostData) string{
@@ -66,27 +69,14 @@ func FlowSingleInvoiceCheckThroughRedis(file_str string) string{
 
 	fmt.Println("debug")
 	for {
-		/*find id in redis
-		if nil or "失败":
-			redis[ID] = "已提交"
-			提交请求
-			if 成功：
-				redis[ID] = result
-			else:
-				redis[ID] = "失败"
-			reuturn redis[ID]
-		elif "已提交"：
-			循环等待
-		else:
-			return redis[ID]
-		*/
+
 		searchRedisResult0,err :=redis.Int(conn.Do("exists", id))
 		if err != nil{
 			log.Fatal(err)
 		}
 
 		if searchRedisResult0==0 {
-			result := SingleInvoiceCheckRedis(singleInvoiceCheckPostData)
+			result := SingleInvoiceCheckAfterRedis(id, singleInvoiceCheckPostData)
 			conn.Do("set",id, result)
 			return result
 		}else{
@@ -95,18 +85,7 @@ func FlowSingleInvoiceCheckThroughRedis(file_str string) string{
 				log.Fatal("in FlowSingInvoiceCheckThroughRedis",err)
 			}
 			switch searchRedisResult1 {
-			case "失败":
-				result :=SingleInvoiceCheckRedis(singleInvoiceCheckPostData)
-				switch result {
-				case "失败":
-					return "失败"
-				default:
-					_,err:= conn.Do("set",id,result)
-					if err!=nil{
-						log.Fatal(err)
-					}
-					return result
-				}
+
 			case "已提交":
 				continue
 			default:
@@ -120,6 +99,68 @@ func FlowSingleInvoiceCheckThroughRedis(file_str string) string{
 
 }
 
+
+func FlowMultiInvoiceCheckThroughRedis(filenames_str []string) string{
+	filenames_str = CheckMultiInputFileType(filenames_str)
+	var multiInvoiceInfo []SingleInvoiceCheckPostData
+	for _,filename := range filenames_str{
+		singleInvoiceCheckPostData := ConvertFileToInvoiceJson(filename)
+		multiInvoiceInfo = append(multiInvoiceInfo,singleInvoiceCheckPostData)
+	}
+	PchNumber := GeneratePchNumber()
+	fmt.Println("PchNumber", PchNumber)
+	AppendContentToFile("./PchNumber_record", PchNumber)
+
+	multiInvoiceCheckPostData := MultiInvoiceCheckPostData{
+		Pch: PchNumber,
+		MultiInvoiceInfo: multiInvoiceInfo,
+	}
+	multiInvoiceCheckPostDataJson,_ :=json.Marshal(multiInvoiceCheckPostData)
+	jsonData := PrepareJsonForHttpRequest(multiInvoiceCheckPostDataJson)
+	MultiInvoiceCheckUrl := GetUrlFromFactory("MultiInvoiceCheck")
+	result := SentHttpequestByPost(MultiInvoiceCheckUrl, jsonData)
+	fmt.Println("result", result)
+
+	//添加redis缓存
+
+	return "PchNumber:"+PchNumber+result
+}
+
+
+func FlowMultiResultQueryThroughRedis(PchNumber string) string{
+	conn :=pool.Get()
+	defer conn.Close()
+
+	searchRedisResult0,err :=redis.Int(conn.Do("exists", PchNumber))
+	if err != nil{
+		log.Fatal(err)
+	}
+
+	if searchRedisResult0==0 {
+		multiInvoiceResultQueryPostData := MultiInvoiceCheckPostData{}
+		multiInvoiceResultQueryPostData.Pch = PchNumber
+
+		multiInvoiceResultQueryPostDataJson,_ :=json.Marshal(multiInvoiceResultQueryPostData)
+		fmt.Println("json data",multiInvoiceResultQueryPostDataJson)
+		jsonData := PrepareJsonForHttpRequest(multiInvoiceResultQueryPostDataJson)
+		fmt.Println("json data", string(jsonData))
+		MultiInvoiceResultQueryUrl := GetUrlFromFactory("MultiInvoiceResultQuery")
+		fmt.Println("Url", string(MultiInvoiceResultQueryUrl))
+		result := SentHttpequestByPost(MultiInvoiceResultQueryUrl, jsonData)
+		//fmt.Println("result", result)
+		_,err:=conn.Do("set",PchNumber,result)
+		if err!=nil{
+			log.Fatal(err)
+		}
+		return result
+	}else{
+		searchRedisResult1,err :=redis.String(conn.Do("get", PchNumber))
+		if err!=nil{
+			log.Fatal("in FlowSingInvoiceCheckThroughRedis",err)
+		}
+		return searchRedisResult1
+	}
+}
 func testRedis(){
 	conn :=pool.Get()
 	defer conn.Close()

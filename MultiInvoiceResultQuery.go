@@ -9,7 +9,7 @@ type MultiInvoiceResultQueryPostData struct {
 	Pch string `json:"pch"`
 }
 
-func flowMultiInvoiceResultQuery(PchNumber string) string{
+func FlowMultiInvoiceResultQuery(PchNumber string) string{
 	multiInvoiceResultQueryPostData := MultiInvoiceCheckPostData{}
 	multiInvoiceResultQueryPostData.Pch = PchNumber
 

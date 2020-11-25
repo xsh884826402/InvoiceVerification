@@ -40,7 +40,7 @@ func ServerFuncMultiInvoiceCheck(w http.ResponseWriter, r *http.Request){
 	InvoiceFiles := CopyHttpfilesToLocalFiles(files)
 
 	if len(InvoiceFiles)>1{
-		result := FlowMultiInvoiceCheck(InvoiceFiles)
+		result := FlowMultiInvoiceCheckThroughRedis(InvoiceFiles)
 		fmt.Fprintf(w, result)
 		return
 	}else{
@@ -54,7 +54,7 @@ func ServerFuncMultiInvoiceResultQuery(w http.ResponseWriter, r *http.Request){
 	r.ParseMultipartForm(32<<20)
 	PchNumbers:=r.MultipartForm.Value["PchNumber"]
 	if len(PchNumbers)==1{
-		res := flowMultiInvoiceResultQuery(string(PchNumbers[0]))
+		res := FlowMultiResultQueryThroughRedis(string(PchNumbers[0]))
 		fmt.Fprintf(w, res)
 		return
 	}else{

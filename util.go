@@ -232,6 +232,6 @@ func AppendContentToFile(filePath string, Content string){
 	}
 	defer file.Close()
 	write:= bufio.NewWriter(file)
-	write.WriteString(Content)
+	write.WriteString(Content+"\n")
 	write.Flush()
 }
