@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/gomodule/redigo/redis"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 func sayHello(w http.ResponseWriter, r *http.Request){
@@ -22,7 +24,7 @@ func ServerFuncSingleInvoiceCheck(w http.ResponseWriter, r *http.Request){
 	files := r.MultipartForm.File["file"]
 	InvoiceFiles := CopyHttpfilesToLocalFiles(files)
 	if len(InvoiceFiles) == 1{
-		result := FlowSingleInvoiceCheck(InvoiceFiles[0])
+		result := FlowSingleInvoiceCheckThroughRedis(InvoiceFiles[0])
 		fmt.Fprintf(w, result)
 		return
 	}else{
@@ -60,11 +62,20 @@ func ServerFuncMultiInvoiceResultQuery(w http.ResponseWriter, r *http.Request){
 		fmt.Fprintf(w,"error please check the log")
 	}
 }
+
 func main() {
+	pool = &redis.Pool{
+		MaxIdle:     10,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", "localhost:6379")
+		},
+	}
+
 	http.HandleFunc("/hello", sayHello)
 	http.HandleFunc("/SingleInvoiceCheck", ServerFuncSingleInvoiceCheck)
 	http.HandleFunc("/MultiInvoiceCheck", ServerFuncMultiInvoiceCheck)
-	http.HandleFunc("/MultiInvoiceRequestQuery", ServerFuncMultiInvoiceResultQuery)
+	http.HandleFunc("/MultiInvoiceResultQuery", ServerFuncMultiInvoiceResultQuery)
 	err :=http.ListenAndServe(":9090", nil)
 	if err != nil{
 		log.Fatal("listenAnd Serve, err")

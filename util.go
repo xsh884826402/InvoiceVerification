@@ -178,7 +178,7 @@ func GetUrlFromFactory(RequestType string) string{
 }
 
 func SentHttpequestByPost(url string,commonPostDataJson [] byte) string{
-	//fmt.Println("Json data", string(commonPostDataJson))
+	fmt.Println("Json data", string(commonPostDataJson))
 	client := &http.Client{}
 	request,_ := http.NewRequest("POST", url, bytes.NewBuffer(commonPostDataJson))
 	request.Header.Set("Content-Type", "application/json")
@@ -186,7 +186,7 @@ func SentHttpequestByPost(url string,commonPostDataJson [] byte) string{
 	//fmt.Println("resp", resp)
 
 	body,_ := ioutil.ReadAll(resp.Body)
-	//fmt.Println("body", string(body))
+	fmt.Println("In Sent Http body", string(body))
 
 	resp_result := CommonPostData{}
 	err := json.Unmarshal(body, &resp_result)
@@ -195,6 +195,7 @@ func SentHttpequestByPost(url string,commonPostDataJson [] byte) string{
 	}
 
 	result,_ := Base64Decode(resp_result.Content)
+	fmt.Println("result", result)
 	return result
 }
 func CopyHttpfilesToLocalFiles(files []*multipart.FileHeader) []string{
@@ -225,12 +226,12 @@ func GeneratePchNumber() string{
 }
 
 func AppendContentToFile(filePath string, Content string){
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE, 0666)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println("文件打开失败", err)
 	}
 	defer file.Close()
-	write := bufio.NewWriter(file)
+	write:= bufio.NewWriter(file)
 	write.WriteString(Content)
 	write.Flush()
 }
