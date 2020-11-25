@@ -64,11 +64,6 @@ func FlowSingleInvoiceCheckThroughRedis(file_str string) string{
 	conn := pool.Get()
 	defer conn.Close()
 
-	//if err != nil{
-	//	log.Fatal(err)
-	//}
-	//
-
 	fmt.Println("debug")
 	for {
 		/*find id in redis
