@@ -9,9 +9,9 @@ import (
 )
 var pool *redis.Pool
 var rwMutex *sync.RWMutex
-type ReturnResult struct {
-	Success bool `json:"success"`
-	Code string `json:"code"`
+type MultiInvoiceReturnResult struct {
+	PchNumber string
+	Content string
 }
 func SingleInvoiceCheckAfterRedis(id string,singleInvoiceCheckPostData SingleInvoiceCheckPostData) string{
 	conn := pool.Get()
@@ -122,8 +122,11 @@ func FlowMultiInvoiceCheckThroughRedis(filenames_str []string) string{
 	fmt.Println("result", result)
 
 	//添加redis缓存
-
-	return "PchNumber:"+PchNumber+result
+	multiInvoiceReturnResult := MultiInvoiceReturnResult{}
+	multiInvoiceReturnResult.PchNumber=PchNumber
+	multiInvoiceReturnResult.Content=result
+	multiInvoiceReturnResultByte,_ :=json.Marshal(multiInvoiceReturnResult)
+	return string(multiInvoiceReturnResultByte)
 }
 
 

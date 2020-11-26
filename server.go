@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"log"
@@ -8,7 +9,10 @@ import (
 	"strings"
 	"time"
 )
-
+type ReturnResult struct {
+	Success bool
+	Content string
+}
 func sayHello(w http.ResponseWriter, r *http.Request){
 	r.ParseForm()
 	for k,v := range r.Form{
@@ -23,14 +27,19 @@ func ServerFuncSingleInvoiceCheck(w http.ResponseWriter, r *http.Request){
 	r.ParseMultipartForm(32<<20)
 	files := r.MultipartForm.File["file"]
 	InvoiceFiles := CopyHttpfilesToLocalFiles(files)
+	returnResult :=ReturnResult{}
 	if len(InvoiceFiles) == 1{
 		result := FlowSingleInvoiceCheckThroughRedis(InvoiceFiles[0])
-		fmt.Fprintf(w, result)
-		return
+		returnResult.Success=true
+		returnResult.Content=result
+
 	}else{
 		log.Println("SingleInvoiceCheck must upload 1 file")
-		fmt.Fprintf(w, "failed. please check the log ")
+		returnResult.Success=false
+		returnResult.Content="输入不合法"
 	}
+	returnResultByte,_ :=json.Marshal(returnResult)
+	fmt.Fprintf(w,string(returnResultByte))
 
 }
 
@@ -39,28 +48,38 @@ func ServerFuncMultiInvoiceCheck(w http.ResponseWriter, r *http.Request){
 	files := r.MultipartForm.File["file"]
 	InvoiceFiles := CopyHttpfilesToLocalFiles(files)
 
+	returnResult :=ReturnResult{}
+
 	if len(InvoiceFiles)>1{
 		result := FlowMultiInvoiceCheckThroughRedis(InvoiceFiles)
-		fmt.Fprintf(w, result)
-		return
+		returnResult.Success=true
+		returnResult.Content=result
 	}else{
 		log.Println("MultiInvoiceCheck must upload more than 1 file")
-		fmt.Fprintf(w, "failed. please check the log ")
+		returnResult.Success=false
+		returnResult.Content="输入不合法"
 	}
+	returnResultByte,_ :=json.Marshal(returnResult)
+	fmt.Fprintf(w,string(returnResultByte))
 
 }
 
 func ServerFuncMultiInvoiceResultQuery(w http.ResponseWriter, r *http.Request){
 	r.ParseMultipartForm(32<<20)
 	PchNumbers:=r.MultipartForm.Value["PchNumber"]
+	returnResult :=ReturnResult{}
+
 	if len(PchNumbers)==1{
 		res := FlowMultiResultQueryThroughRedis(string(PchNumbers[0]))
-		fmt.Fprintf(w, res)
-		return
+		returnResult.Success=true
+		returnResult.Content=res
 	}else{
 		log.Println("Can not found the PchNumber ")
-		fmt.Fprintf(w,"error please check the log")
+		returnResult.Success=false
+		returnResult.Content="输入不合法"
 	}
+	returnResultByte,_ :=json.Marshal(returnResult)
+	fmt.Fprintf(w,string(returnResultByte))
 }
 
 func main() {
